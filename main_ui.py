@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(509, 529)
+        Form.resize(509, 541)
         self.gridLayoutWidget = QtWidgets.QWidget(parent=Form)
         self.gridLayoutWidget.setGeometry(QtCore.QRect(20, 20, 471, 201))
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
@@ -137,6 +137,31 @@ class Ui_Form(object):
         self.pb_add.setFlat(False)
         self.pb_add.setObjectName("pb_add")
         self.gridLayout.addWidget(self.pb_add, 4, 2, 1, 1)
+        self.pb_instruct = QtWidgets.QPushButton(parent=self.gridLayoutWidget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pb_instruct.sizePolicy().hasHeightForWidth())
+        self.pb_instruct.setSizePolicy(sizePolicy)
+        self.pb_instruct.setMinimumSize(QtCore.QSize(100, 40))
+        self.pb_instruct.setMouseTracking(False)
+        self.pb_instruct.setAcceptDrops(False)
+        self.pb_instruct.setAutoFillBackground(False)
+        self.pb_instruct.setStyleSheet("QPushButton {\n"
+"    background-color: rgb(255, 170, 255);\n"
+"    border-radius: 10px;\n"
+"    font-weight: bold;\n"
+"    font-size: 12px;\n"
+"    padding: 8px;\n"
+"}\n"
+"QPushButton:pressed {\n"
+"    background-color: rgb(0, 255, 127);\n"
+"}")
+        self.pb_instruct.setAutoDefault(False)
+        self.pb_instruct.setDefault(False)
+        self.pb_instruct.setFlat(False)
+        self.pb_instruct.setObjectName("pb_instruct")
+        self.gridLayout.addWidget(self.pb_instruct, 0, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignHCenter)
         self.tv_csv = QtWidgets.QTableView(parent=Form)
         self.tv_csv.setGeometry(QtCore.QRect(25, 240, 461, 251))
         self.tv_csv.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
@@ -157,7 +182,12 @@ class Ui_Form(object):
         self.tv_csv.verticalHeader().setCascadingSectionResizes(False)
         self.tv_csv.verticalHeader().setStretchLastSection(False)
         self.label_3 = QtWidgets.QLabel(parent=Form)
-        self.label_3.setGeometry(QtCore.QRect(140, 500, 251, 20))
+        self.label_3.setGeometry(QtCore.QRect(140, 510, 251, 20))
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setItalic(True)
+        font.setUnderline(False)
+        self.label_3.setFont(font)
         self.label_3.setTextFormat(QtCore.Qt.TextFormat.AutoText)
         self.label_3.setOpenExternalLinks(True)
         self.label_3.setObjectName("label_3")
@@ -176,4 +206,5 @@ class Ui_Form(object):
         self.l_req_left.setText(_translate("Form", "Req. left: -"))
         self.pb_sync.setText(_translate("Form", "Sync"))
         self.pb_add.setText(_translate("Form", "Add"))
+        self.pb_instruct.setText(_translate("Form", "Get API Token"))
         self.label_3.setText(_translate("Form", "<html><head/><body><p>Developed by Muksam Limboo, <a href=\"https://github.com/mukku105\"><span style=\" text-decoration: underline; color:#0000ff;\">mukku105</span></a></p></body></html>"))
