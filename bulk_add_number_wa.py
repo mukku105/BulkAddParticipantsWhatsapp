@@ -1,6 +1,7 @@
 # GUI for bulk adding numbers to whatsapp group
 
 import itertools
+import os
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog, QScrollArea
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
@@ -9,10 +10,16 @@ import requests
 import json
 import pandas as pd
 
+try:
+    os.chdir(sys._MEIPASS)
+    print(sys._MEIPASS)
+except:
+    pass
+
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.ui = uic.loadUi('main.ui', self)
+        self.ui = uic.loadUi('./ui/main.ui', self)
         self.setFixedSize(512, 540)
         self.setWindowTitle('Bulk Add Participants to WhatsApp')
 
@@ -203,13 +210,15 @@ class MainWindow(QWidget):
             <p>
             1. Visit <a href='https://panel.whapi.cloud/login'>https://panel.whapi.cloud/login</a> 
             and login with your credentials or <strong>Sign Up.</strong>
-            <br><img src='./imgs/login.jpg' width='200'></img><br>
+            <br>
             2. Follow the Steps to sign in to your WhatsApp.<br>
             3. Go to Dashboard <a href='https://panel.whapi.cloud/dashboard'>https://panel.whapi.cloud/dashboard</a><br>
             4. Select the channel.
             <br><img src='./imgs/dashboard.jpg' width='200'></img><br>
             5. Grab the API Token <br>
-                <img src='./imgs/token.jpg' width='200'></img></br>
+                <img src='./imgs/token.jpg' width='200'></img><br>
+            6. Create CSV file containing participants in the format given below and import<br>
+                <img src='./imgs/csv_format.jpg' width='180'></img>
             </p>
             """
             # scroll = QScrollArea(self)
