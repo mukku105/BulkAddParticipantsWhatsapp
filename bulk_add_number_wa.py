@@ -4,7 +4,8 @@
 
 import itertools
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog, QComboBox
+from PyQt6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
+from PyQt6.QtGui import QStandardItemModel, QStandardItem
 from PyQt6 import uic
 import requests
 import json
@@ -14,7 +15,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.ui = uic.loadUi('main.ui', self)
-        self.setFixedSize(512, 640)
+        self.setFixedSize(512, 530)
         self.setWindowTitle('Bulk Add Participants to WhatsApp')
 
         self.xor_enc_key = "Asjwu@341SsjcuSduy23"
@@ -28,6 +29,7 @@ class MainWindow(QWidget):
 
         self.ui.pb_savetoken.clicked.connect(self.save_token)
         self.ui.pb_sync.clicked.connect(self.sync_wa_info)
+        self.ui.pb_add.clicked.connect(self.add_participants)
         self.ui.cb_grouplist.currentIndexChanged.connect(self.group_selected)
 
         self.ui.pb_import.clicked.connect(self.import_csv)
@@ -107,12 +109,101 @@ class MainWindow(QWidget):
             self.ui.l_csvpath.setText(file_name)
             self.ui.l_csvpath.setToolTip(file_name)
             df = pd.read_csv(file_name)
-            print(df)
-            
+            self.set_tableview_csv(df)
+    
+    def set_tableview_csv(self, df):
+        model = QStandardItemModel(self)
+        model.setHorizontalHeaderLabels(df.columns)
+        for i in range(len(df.index)):
+            for j in range(len(df.columns)):
+                model.setItem(i, j, QStandardItem(str(df.iat[i, j])))
+        self.ui.tv_csv.setModel(model)
+        # self.ui.tv_csv.selectAll()
+        self.ui.tv_csv.resizeColumnsToContents()
+        self.ui.tv_csv.show()
+    
     def get_file_name(self):
         file_name, _ = QFileDialog.getOpenFileName(self, "Open CSV File", "", "CSV Files (*.csv)")
         return file_name
+    
+    def check_phone_number(self, group_id, numbers):
+        check_phone_api_url = 'https://gate.whapi.cloud/contacts'
+        headers = { 
+            'Authorization': 'Bearer ' + self.ui.le_watoken.text().strip(), 
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json' 
+        }
 
+        data = {
+            'blocking': 'wait',
+            'contacts': numbers
+        }
+
+        response = requests.post(check_phone_api_url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            invalid_numbers = []
+            for contact in json.loads(response.text)['contacts']:
+                if contact['status'] == 'invalid':
+                    invalid_numbers.append(contact['input'])
+            if invalid_numbers:
+                QMessageBox.critical(self, 'Error', 'Invalid phone numbers: ' + ', '.join(invalid_numbers) + '<br><strong>Please correct the numbers and try again</strong>')
+            else:
+                self.add_numbers_to_group(group_id, numbers)
+        else:
+            QMessageBox.critical(self, 'Error', 'Error checking phone numbers' + str(response.text))
+
+    def add_participants(self):
+        group_id = self.ui.cb_grouplist.currentData()
+        if not group_id:
+            QMessageBox.critical(self, 'Error', 'Please select a group')
+            return
+
+        model = self.ui.tv_csv.model()
+        numbers = []
+
+        for i in range(model.rowCount()):
+            number = model.index(i, 1).data()
+
+            if len(number) == 10:
+                number = '91' + number
+            numbers.append(number)
+        df = pd.read_csv(self.ui.l_csvpath.toolTip())
+        print(numbers)
+        self.check_phone_number(group_id, numbers)
+        # self.add_numbers_to_group(group_id, numbers)
+
+    def add_numbers_to_group(self, group_id, numbers):
+        group_api_url = 'https://gate.whapi.cloud/groups/' + group_id + '/participants'
+        headers = { 
+            'Authorization': 'Bearer ' + self.ui.le_watoken.text().strip(), 
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json' 
+        }
+
+        data = {
+            'participants': numbers
+        }
+
+        response = requests.post(group_api_url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            msg = 'Numbers added successfully'
+            if json.loads(response.text)['failed']:
+                msg += '<br><strong>Failed to add: </strong>' + ', '.join(json.loads(response.text)['failed'])
+            QMessageBox.information(self, 'Success', msg)
+            print(response.text)
+        elif response.status_code == 409:
+            msg = '<strong>Some Participants are already in the Group. Please remove them and try again.</strong>'
+            msg += '<br>' + response.text
+            QMessageBox.critical(self, 'Error', msg)
+        else:
+            QMessageBox.critical(self, 'Error', 'Error adding numbers' + str(response.text))
+
+    def closeEvent(self, event):
+        reply = QMessageBox.question(self, 'Message', 'Are you sure you want to quit?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
