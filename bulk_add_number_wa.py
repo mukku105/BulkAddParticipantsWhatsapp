@@ -82,10 +82,13 @@ class MainWindow(QWidget):
         response = requests.get(group_api_url, headers=headers)
         if response.status_code == 200:
             group_list = json.loads(response.text)
-            print(group_list)
             self.ui.cb_grouplist.clear()
             for group in group_list['groups']:
-                self.ui.cb_grouplist.addItem(group['name'], group['id'])
+               try:
+                    print(group['name'], " - ", group['id'])
+                    self.ui.cb_grouplist.addItem(group['name'], group['id'])
+                except Exception as e:
+                    print(e)
         else:
             QMessageBox.critical(self, 'Error', 'Error fetching group list' + str(response.text))
 
