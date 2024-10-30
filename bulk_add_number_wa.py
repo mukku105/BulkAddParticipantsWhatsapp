@@ -20,21 +20,26 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.ui = uic.loadUi('./ui/main.ui', self)
-        self.setFixedSize(512, 540)
+        self.setFixedSize(540, 540)
         self.setWindowTitle('Bulk Add Participants to WhatsApp')
 
         self.xor_enc_key = "Asjwu@341SsjcuSduy23"
 
         try:
-            with open('token.wapi', 'rb') as f:
+            with open('./token.wapi', 'rb') as f:
                 encrypted_token = f.read().decode()
                 self.ui.le_watoken.setText(self.xor_encrypt_decrypt(encrypted_token, self.xor_enc_key))
+            
+            with open('./google_contact_token.wapi', 'rb') as f:
+                encrypted_google_contact_token = f.read().decode()
+                self.ui.le_gc_token.setText(self.xor_encrypt_decrypt(encrypted_google_contact_token, self.xor_enc_key))
         except FileNotFoundError:
             pass
 
         self.ui.pb_savetoken.clicked.connect(self.save_token)
         self.ui.pb_sync.clicked.connect(self.sync_wa_info)
         self.ui.pb_add.clicked.connect(self.add_participants)
+        self.ui.pb_contacts_sync.clicked.connect(self.create_contacts_to_sync)
         self.ui.pb_instruct.clicked.connect(self.show_instructions)
         self.ui.cb_grouplist.currentIndexChanged.connect(self.group_selected)
 
@@ -44,13 +49,22 @@ class MainWindow(QWidget):
 
     def save_token(self):
         token = self.ui.le_watoken.text().strip()
+        google_contact_token = self.ui.le_gc_token.text().strip()
         if token:
             encrypted_token = self.xor_encrypt_decrypt(token, self.xor_enc_key)
-            with open('token.wapi', 'wb') as f:
+            with open('./token.wapi', 'wb') as f:
                 f.write(encrypted_token.encode())
-            QMessageBox.information(self, 'Success', 'Token saved successfully')
+            QMessageBox.information(self, 'Success', 'Whapi Token saved successfully')
         else:
-            QMessageBox.critical(self, 'Error', 'Please enter a valid token')  
+            QMessageBox.critical(self, 'Error', 'Please enter a valid Whapi token')
+
+        if google_contact_token:
+            encrypted_google_contact_token = self.xor_encrypt_decrypt(google_contact_token, self.xor_enc_key)
+            with open('./google_contact_token.wapi', 'wb') as f:
+                f.write(encrypted_google_contact_token.encode())
+            QMessageBox.information(self, 'Success', 'google_contact_token saved successfully')
+        else:
+            QMessageBox.critical(self, 'Error', 'Please enter a valid google_contact_token')
 
     def xor_encrypt_decrypt(self, text, key):
         return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(text, itertools.cycle(key)))
@@ -84,7 +98,7 @@ class MainWindow(QWidget):
             group_list = json.loads(response.text)
             self.ui.cb_grouplist.clear()
             for group in group_list['groups']:
-               try:
+                try:
                     print(group['name'], " - ", group['id'])
                     self.ui.cb_grouplist.addItem(group['name'], group['id'])
                 except Exception as e:
@@ -161,6 +175,28 @@ class MainWindow(QWidget):
     #     else:
     #         QMessageBox.critical(self, 'Error', 'Error checking phone numbers' + str(response.text))
 
+    def create_contacts_to_sync(self):
+        model = self.ui.tv_csv.model()
+        contacts = []
+
+        if not model:
+            QMessageBox.critical(self, 'Error', 'Please import a CSV file')
+            return
+
+        for i in range(model.rowCount()):
+            number = model.index(i, 1).data()
+
+            if len(number) == 10:
+                number = '91' + number
+                number_json = {
+                    "name": model.index(i, 0).data(),
+                    "phone": number
+                }
+                contacts.append(number_json)
+        df = pd.read_csv(self.ui.l_csvpath.toolTip())
+        print(number_json)
+        self.add_numbers_to_google_contact(contacts)
+
     def add_participants(self):
         group_id = self.ui.cb_grouplist.currentData()
         if not group_id:
@@ -175,11 +211,34 @@ class MainWindow(QWidget):
 
             if len(number) == 10:
                 number = '91' + number
-            numbers.append(number)
+                numbers.append(number)
         df = pd.read_csv(self.ui.l_csvpath.toolTip())
         print(numbers)
         # self.check_phone_number(group_id, numbers)
         self.add_numbers_to_group(group_id, numbers)
+
+    def add_numbers_to_google_contact(self, contacts):
+        google_contact_api_url = 'https://tools.whapi.cloud/integrations/google_people/addContacts'
+        headers = { 
+            'Authorization': 'Bearer ' + self.ui.le_watoken.text().strip(), 
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json' 
+        }
+
+        # create a json of numbers with name and phone number
+
+        data = {
+            'token': self.ui.le_gc_token.text().strip(),
+            'contacts': contacts
+        }
+
+        response = requests.post(google_contact_api_url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            msg = 'Numbers added to Google Contacts successfully'
+            QMessageBox.information(self, 'Success', msg)
+            print(response.text)
+        else:
+            QMessageBox.critical(self, 'Error', 'Error adding numbers' + str(response.text))
 
     def add_numbers_to_group(self, group_id, numbers):
         group_api_url = 'https://gate.whapi.cloud/groups/' + group_id + '/participants'
